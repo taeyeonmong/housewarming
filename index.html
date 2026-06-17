@@ -17,9 +17,15 @@
       font-weight: normal; font-style: normal;
     }
     @media (max-width: 420px) {
-  .logo-block { width: 60px; height: 60px; font-size: 30px; border-radius: 14px; }
-  .ac-logo-row { gap: 6px; }
-  .leaf { font-size: 22px; }
+  .logo-block {
+    width: min(76px, 17vw);
+    height: min(76px, 17vw);
+    font-size: min(40px, 9vw);
+    border-radius: min(18px, 4vw);
+  ...
+}
+.ac-logo-row { gap: min(10px, 2vw); }
+.leaf { font-size: min(30px, 7vw); }
 }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
