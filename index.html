@@ -235,17 +235,11 @@
       height: 36px; border-radius: 10px; font-size: 14px;
       transition: background .15s, color .15s, transform .12s;
     }
-    .cal-cell.wknd  { color: #c0a8a0; background: #f5ede0; }
-    .cal-cell.wkday {
-      color: #3d2b1f; background: #fffef5;
-      cursor: pointer; border: 2px solid #ead39d;
-    }
-    .cal-cell.wkday:hover { background: #c0e8d8; border-color: #67b26f; }
-    .cal-cell.wkday.on {
-      background: #f59b3c; color: white;
-      border-color: #d38b2c;
-      box-shadow: 0 3px 0 #d38b2c;
-      transform: scale(1.06);
+    .cal-cell.blocked { color: #ccc; background: #f0ece6; cursor: not-allowed; position: relative; }
+    .cal-cell.blocked::after { content: ''; position: absolute; width: 60%; height: 2px; background: #ddd; border-radius: 1px; transform: rotate(-45deg); }
+    .cal-cell.selectable { color: #3d2b1f; background: #fffef5; cursor: pointer; border: 2px solid #ead39d; }
+    .cal-cell.selectable:hover { background: #c0e8d8; border-color: #67b26f; }
+    .cal-cell.selectable.on { background: #f59b3c; color: white; border-color: #d38b2c; box-shadow: 0 3px 0 #d38b2c; transform: scale(1.06); 
     }
 
     /* ── Chips ──────────────────────────────────────────────────────────── */
@@ -426,7 +420,7 @@
         <span class="logo-block green">네</span>
         <span class="logo-block yellow">집</span>
       </div>
-      <div class="ac-subtitle">Housewarming Party ✦ 2026.07</div>
+      <div class="ac-subtitle">Housewarming Party ✦ 2026.06-07</div>
     </div>
 
     <!-- 카드 + CTA -->
@@ -460,9 +454,8 @@
           <div class="card-icon i-yellow">📅</div>
           <div class="q-label">참석 가능일</div>
         </div>
-        <div class="q-desc">7월 평일 중 가능한 날을 모두 골라주세요</div>
-        <div class="cal-month-label">2026년 7월</div>
-        <div class="cal-grid" id="cal-grid"></div>
+        <div class="q-desc">가능한 날을 모두 골라주세요</div>
+        <div id="cal-container"></div>
       </div>
 
       <div class="card" id="card-meal">
@@ -566,22 +559,38 @@ function nav(to, dir) {
 
 /* ── Calendar ── */
 const selectedDates = new Set();
+const BLOCKED_DATES = new Set(['6/26','6/27','6/28','6/29']);
+
 function buildCal() {
-  const grid = document.getElementById('cal-grid');
+  const container = document.getElementById('cal-container');
   const heads = ['월','화','수','목','금','토','일'];
-  let h = heads.map((d,i) => `<div class="cal-head${i>=5?' wk':''}">${d}</div>`).join('');
-  const startDow = 2;
-  for (let e=0; e<startDow; e++) h += `<div class="cal-cell empty"></div>`;
-  for (let d=1; d<=31; d++) {
-    const dow = (startDow+d-1)%7;
-    const key = `7/${d}`;
-    h += dow>=5
-      ? `<div class="cal-cell wknd">${d}</div>`
-      : `<div class="cal-cell wkday" onclick="toggleDay('${key}',this)">${d}</div>`;
+  const headHtml = heads.map((d,i) => `<div class="cal-head${i>=5?' wk':''}">${d}</div>`).join('');
+  let html = '';
+
+  // 6월 (22~30), 6/22 = 월요일 → 앞 빈칸 없음
+  html += `<div class="cal-month-label">2026년 6월</div><div class="cal-grid">` + headHtml;
+  for (let d = 22; d <= 30; d++) {
+    const key = `6/${d}`;
+    html += BLOCKED_DATES.has(key)
+      ? `<div class="cal-cell blocked" title="선택 불가">${d}</div>`
+      : `<div class="cal-cell selectable" onclick="toggleDay('${key}',this)">${d}</div>`;
   }
-  grid.innerHTML = h;
+  for (let e = 0; e < 5; e++) html += `<div class="cal-cell empty"></div>`; // 6/30=화 → 나머지 5칸
+  html += `</div>`;
+
+  // 7월 (1~31), 7/1 = 수요일 → 앞 빈칸 2개
+  html += `<div class="cal-month-label" style="margin-top:14px">2026년 7월</div><div class="cal-grid">` + headHtml;
+  for (let e = 0; e < 2; e++) html += `<div class="cal-cell empty"></div>`;
+  for (let d = 1; d <= 31; d++) {
+    html += `<div class="cal-cell selectable" onclick="toggleDay('7/${d}',this)">${d}</div>`;
+  }
+  html += `</div>`;
+
+  container.innerHTML = html;
 }
+
 function toggleDay(key, el) {
+  if (BLOCKED_DATES.has(key)) return;
   if (selectedDates.has(key)) { selectedDates.delete(key); el.classList.remove('on'); }
   else                        { selectedDates.add(key);    el.classList.add('on'); }
 }
@@ -618,7 +627,11 @@ function markError(id) {
 /* ── Submit ── */
 async function handleSubmit() {
   const name  = document.getElementById('input-name').value.trim();
-  const dates = [...selectedDates].sort((a,b) => +a.split('/')[1] - +b.split('/')[1]);
+  const dates = [...selectedDates].sort((a,b) => {
+  const [am, ad] = a.split('/').map(Number);
+  const [bm, bd] = b.split('/').map(Number);
+  return am !== bm ? am - bm : ad - bd;
+});
   const meals = getSelected('meal');
   const cons  = getSelected('concept');
   if (!name)         { markError('card-name');    return showToast('이름을 입력해 주세요!'); }
@@ -678,8 +691,12 @@ async function saveImage() {
 }
 
 /* ── Results ── */
-const WEEKDAYS = [];
-for (let d=1; d<=31; d++) { if ((2+d-1)%7 < 5) WEEKDAYS.push(`7/${d}`); }
+const ALL_DATES = [];
+for (let d = 22; d <= 30; d++) {
+  const key = `6/${d}`;
+  if (!BLOCKED_DATES.has(key)) ALL_DATES.push(key);
+}
+for (let d = 1; d <= 31; d++) ALL_DATES.push(`7/${d}`);
 
 async function loadResults() {
   const list = document.getElementById('results-list');
