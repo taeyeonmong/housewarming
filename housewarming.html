@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>탱구네 집들이 🏠</title>
+  <style>
+    @font-face {
+      font-family: 'MaplestoryBold';
+      src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_20-04@2.1/MaplestoryOTFBold.woff') format('woff');
+      font-weight: bold; font-style: normal;
+    }
+    @font-face {
+      font-family: 'MaplestoryLight';
+      src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_20-04@2.1/MaplestoryOTFLight.woff') format('woff');
+      font-weight: normal; font-style: normal;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    /* ── Reset ─────────────────────────────────────────────────────────── */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      min-height: 100%;
+      font-family: 'MaplestoryLight', 'Apple SD Gothic Neo', sans-serif;
+      color: #3d2b1f;
+    }
+
+    /* ── Background (GPT 제안 — 점 패턴) ──────────────────────────────── */
+    body {
+      background:
+        radial-gradient(circle at 24px 24px, rgba(109,180,122,.18) 3px, transparent 4px)
+        0 0 / 48px 48px,
+        #d9efe3;
+    }
+
+    /* ── App wrapper ────────────────────────────────────────────────────── */
+    #app {
+      max-width: 480px;
+      margin: 0 auto;
+      min-height: 100vh;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* ── Screen transitions ─────────────────────────────────────────────── */
+    .screen {
+      position: absolute;
+      inset: 0;
+      min-height: 100vh;
+      overflow-y: auto;
+      pointer-events: none;
+      transition: transform .42s cubic-bezier(.4,0,.2,1), opacity .42s;
+    }
+    .screen.active     { transform: translateX(0);    opacity: 1; pointer-events: auto; }
+    .screen.gone-left  { transform: translateX(-105%);opacity: 0; }
+    .screen.gone-right { transform: translateX(105%); opacity: 0; }
+
+    /* ══════════════ COVER ══════════════ */
+    #scr-cover {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 40px 24px 56px;
+      background:
+        radial-gradient(circle at 24px 24px, rgba(109,180,122,.18) 3px, transparent 4px)
+        0 0 / 48px 48px,
+        #d9efe3;
+    }
+
+    /* ── AC Logo (GPT 제안) ─────────────────────────────────────────────── */
+    .ac-logo { text-align: center; margin: 0 auto 28px; }
+    .ac-logo-row {
+      display: flex; justify-content: center;
+      align-items: center; gap: 10px;
+    }
+    .ac-logo-row.second { margin-top: 12px; }
+    .logo-block {
+      width: 76px; height: 76px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'MaplestoryBold', sans-serif;
+      font-size: 40px; font-weight: 900;
+      border-radius: 18px;
+      color: #fff;
+      border: 4px solid rgba(255,255,255,.6);
+      box-shadow: 0 6px 0 rgba(0,0,0,.22), 0 12px 24px rgba(0,0,0,.14);
+      transform: rotate(-2deg);
+      transition: transform .15s;
+    }
+    .logo-block:nth-child(even) { transform: rotate(2deg); }
+    .logo-block:hover { transform: rotate(0deg) scale(1.06); }
+    .logo-block.green  { background: #67b26f; }
+    .logo-block.yellow { background: #e3b72f; }
+    .logo-block.blue   { background: #5daee8; }
+    .logo-block.orange { background: #f59b3c; }
+    .logo-block.red    { background: #e96b53; }
+    .logo-block.purple { background: #a06abf; }
+    .leaf { font-size: 30px; }
+    .ac-subtitle {
+      margin-top: 16px;
+      font-size: 14px; letter-spacing: 3px;
+      color: #6e5a3d; text-transform: uppercase;
+    }
+
+    /* ── Cover card ─────────────────────────────────────────────────────── */
+    .cover-card {
+      width: 100%; max-width: 400px;
+      background: #fff7df;
+      border-radius: 28px;
+      border: 4px solid #ead39d;
+      box-shadow: 0 8px 0 #d2b67b, 0 18px 30px rgba(0,0,0,.08);
+      padding: 28px 28px 32px;
+      display: flex; flex-direction: column;
+      align-items: center; gap: 8px;
+      text-align: center;
+    }
+    .cover-desc {
+      font-size: 17px; color: #5a4030; line-height: 1.8;
+      margin-bottom: 12px;
+    }
+
+    /* ── AC Button (GPT 제안) ────────────────────────────────────────────── */
+    .ac-btn {
+      background: #f7be54;
+      color: #714c1d;
+      font-family: 'MaplestoryBold', sans-serif;
+      font-size: 19px; font-weight: 800;
+      border: none; border-radius: 999px;
+      padding: 16px 44px;
+      cursor: pointer;
+      box-shadow: 0 6px 0 #d38b2c;
+      transition: transform .15s, box-shadow .15s;
+      position: relative; z-index: 5;
+    }
+    .ac-btn:hover  { transform: translateY(-2px); }
+    .ac-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #d38b2c; }
+
+    /* ══════════════ TOP BAR (GPT 제안 — 초록 그라디언트 + 스캘럽) ══════════ */
+    .top-bar {
+      position: relative;
+      background: linear-gradient(180deg, #74c770, #5baa5f);
+      padding: 18px 16px 28px;
+      text-align: center;
+    }
+    .top-bar::after {
+      content: "";
+      position: absolute; bottom: -1px; left: 0; right: 0;
+      height: 24px;
+      background: radial-gradient(circle at 12px 0, #5baa5f 12px, transparent 13px);
+      background-size: 24px 24px;
+      pointer-events: none;
+    }
+    .top-bar h2 { font-size: 20px; color: white; position: relative; z-index: 1; }
+    .top-bar p  { font-size: 13px; color: rgba(255,255,255,.88); margin-top: 3px; position: relative; z-index: 1; }
+    .back-btn {
+      position: absolute; left: 12px; top: 14px; z-index: 2;
+      background: rgba(255,255,255,.28); border: none; border-radius: 50%;
+      width: 34px; height: 34px; font-size: 17px;
+      cursor: pointer; color: white;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .refresh-btn {
+      position: absolute; right: 12px; top: 14px; z-index: 2;
+      background: rgba(255,255,255,.28); border: none; border-radius: 50%;
+      width: 34px; height: 34px; font-size: 18px;
+      cursor: pointer; color: white;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    /* ══════════════ FORM ══════════════ */
+    #scr-form { background: #d9efe3; }
+    .form-body { padding: 36px 16px 64px; }
+
+    /* ── AC Card (GPT 제안) ─────────────────────────────────────────────── */
+    .card {
+      background: #fff7df;
+      border-radius: 28px;
+      border: 4px solid #ead39d;
+      box-shadow: 0 8px 0 #d2b67b, 0 18px 30px rgba(0,0,0,.07);
+      padding: 22px 22px 24px;
+      margin-bottom: 18px;
+      transition: border-color .2s;
+    }
+    .card.error {
+      border-color: #e96b53;
+      box-shadow: 0 8px 0 #c04030, 0 18px 30px rgba(0,0,0,.07);
+      animation: shake .4s ease;
+    }
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20%      { transform: translateX(-7px); }
+      40%      { transform: translateX(7px); }
+      60%      { transform: translateX(-4px); }
+      80%      { transform: translateX(4px); }
+    }
+
+    /* Card header row */
+    .card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+    .card-icon {
+      width: 38px; height: 38px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 19px; flex-shrink: 0;
+    }
+    .i-teal   { background: #c0e8d8; }
+    .i-yellow { background: #fde8aa; }
+    .i-pink   { background: #fdd4d8; }
+    .i-green  { background: #c8edcc; }
+    .q-label { font-size: 17px; color: #3d2b1f; }
+    .q-desc  { font-size: 13px; color: #8a6a50; margin-bottom: 14px; margin-top: 3px; padding-left: 48px; }
+
+    .name-input {
+      width: 100%; border: 3px solid #ead39d; border-radius: 14px;
+      padding: 11px 14px; font-family: inherit; font-size: 16px; color: #3d2b1f;
+      background: #fffef5; outline: none; transition: border-color .2s;
+    }
+    .name-input:focus { border-color: #67b26f; }
+
+    /* ── Calendar ───────────────────────────────────────────────────────── */
+    .cal-month-label { text-align: center; font-size: 16px; color: #3d2b1f; margin-bottom: 10px; }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+    .cal-head { text-align: center; font-size: 12px; color: #8a6a50; padding: 3px 0 7px; }
+    .cal-head.wk { color: #c08090; }
+    .cal-cell {
+      display: flex; align-items: center; justify-content: center;
+      height: 36px; border-radius: 10px; font-size: 14px;
+      transition: background .15s, color .15s, transform .12s;
+    }
+    .cal-cell.wknd  { color: #c0a8a0; background: #f5ede0; }
+    .cal-cell.wkday {
+      color: #3d2b1f; background: #fffef5;
+      cursor: pointer; border: 2px solid #ead39d;
+    }
+    .cal-cell.wkday:hover { background: #c0e8d8; border-color: #67b26f; }
+    .cal-cell.wkday.on {
+      background: #f59b3c; color: white;
+      border-color: #d38b2c;
+      box-shadow: 0 3px 0 #d38b2c;
+      transform: scale(1.06);
+    }
+
+    /* ── Chips ──────────────────────────────────────────────────────────── */
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip {
+      padding: 9px 18px; border-radius: 999px;
+      border: 3px solid #ead39d; background: #fffef5;
+      font-family: inherit; font-size: 14px; color: #3d2b1f;
+      cursor: pointer; transition: all .15s; user-select: none;
+    }
+    .chip:hover { border-color: #67b26f; background: #c0e8d8; }
+    .chip.on {
+      background: #f59b3c; border-color: #d38b2c;
+      color: white; box-shadow: 0 3px 0 #d38b2c;
+    }
+    .custom-input {
+      margin-top: 10px; width: 100%;
+      border: 3px solid #ead39d; border-radius: 14px;
+      padding: 10px 14px; font-family: inherit; font-size: 14px;
+      color: #3d2b1f; background: #fffef5; outline: none; display: none;
+    }
+    .custom-input.show { display: block; }
+    .custom-input:focus { border-color: #67b26f; }
+
+    .submit-btn {
+      width: 100%; padding: 16px;
+      background: #f7be54; color: #714c1d;
+      border: none; border-radius: 999px;
+      font-family: inherit; font-size: 18px; font-weight: 800; cursor: pointer;
+      box-shadow: 0 6px 0 #d38b2c;
+      transition: transform .15s, box-shadow .15s; margin-top: 6px;
+    }
+    .submit-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #d38b2c; }
+    .submit-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* ══════════════ RESULT ══════════════ */
+    #scr-result {
+      background: #d9efe3;
+      min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 40px 16px 64px; overflow-y: auto;
+    }
+    .ac-sticker { font-size: 64px; margin-bottom: 16px; animation: float 3s ease-in-out infinite; }
+    @keyframes float {
+      0%,100% { transform: rotate(-6deg) translateY(0); }
+      50%      { transform: rotate(6deg) translateY(-8px); }
+    }
+    #result-card {
+      width: 100%; max-width: 360px;
+      background: #fff7df;
+      border-radius: 28px;
+      border: 4px solid #ead39d;
+      box-shadow: 0 8px 0 #d2b67b, 0 18px 30px rgba(0,0,0,.08);
+      padding: 0 0 22px; overflow: hidden;
+      margin-bottom: 18px;
+    }
+    .rc-top-bar {
+      background: linear-gradient(180deg, #74c770, #5baa5f);
+      padding: 16px 20px 20px; position: relative; margin-bottom: 20px;
+    }
+    .rc-top-bar::after {
+      content: "";
+      position: absolute; bottom: -1px; left: 0; right: 0; height: 20px;
+      background: radial-gradient(circle at 10px 0, #5baa5f 10px, transparent 11px);
+      background-size: 20px 20px; pointer-events: none;
+    }
+    .rc-title { font-size: 21px; color: white; text-align: center; }
+    .rc-sub   { font-size: 13px; color: rgba(255,255,255,.85); text-align: center; margin-top: 3px; }
+    .rc-body  { padding: 0 20px; }
+    .rc-row   { margin-bottom: 13px; }
+    .rc-lbl   { font-size: 12px; color: #8a6a50; margin-bottom: 6px; }
+    .rc-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+    .rc-chip  { background: #c0e8d8; color: #2d6040; padding: 4px 12px; border-radius: 20px; font-size: 13px; }
+    .rc-foot  { text-align: center; font-size: 14px; color: #8a6a50; margin-top: 14px; }
+
+    .save-btn {
+      width: 100%; max-width: 360px; padding: 14px;
+      background: #fff7df; color: #714c1d;
+      border: 4px solid #ead39d; border-radius: 999px;
+      font-family: inherit; font-size: 16px; cursor: pointer;
+      box-shadow: 0 6px 0 #d2b67b;
+      margin-bottom: 14px;
+      transition: transform .15s, box-shadow .15s;
+    }
+    .save-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #d2b67b; }
+    .ghost-btn {
+      background: none; border: none;
+      font-family: inherit; color: #8a6a50; font-size: 14px;
+      cursor: pointer; text-decoration: underline; text-underline-offset: 3px;
+    }
+
+    /* ══════════════ RESULTS VIEW (박물관 도감 느낌) ══════════════ */
+    #scr-results { background: #d9efe3; }
+    .results-body { padding: 36px 16px 64px; }
+
+    .stats-card {
+      background: #fff7df; border-radius: 28px;
+      border: 4px solid #ead39d;
+      padding: 0 0 16px; margin-bottom: 18px;
+      box-shadow: 0 8px 0 #d2b67b, 0 18px 30px rgba(0,0,0,.07);
+      overflow: hidden;
+    }
+    .stats-top {
+      background: linear-gradient(180deg, #74c770, #5baa5f);
+      padding: 10px 18px 16px; position: relative; margin-bottom: 18px;
+    }
+    .stats-top::after {
+      content: "";
+      position: absolute; bottom: -1px; left: 0; right: 0; height: 16px;
+      background: radial-gradient(circle at 10px 0, #5baa5f 10px, transparent 11px);
+      background-size: 20px 20px; pointer-events: none;
+    }
+    .stats-title { font-size: 16px; color: white; }
+    .stats-body { padding: 0 18px; }
+    .stat-row   { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .stat-name  { font-size: 13px; color: #3d2b1f; min-width: 52px; }
+    .stat-bg    { flex: 1; height: 10px; background: #ead39d; border-radius: 5px; overflow: hidden; }
+    .stat-fill  { height: 10px; background: #f59b3c; border-radius: 5px; transition: width .6s ease; }
+    .stat-cnt   { font-size: 14px; color: #d38b2c; min-width: 28px; text-align: right; }
+
+    /* GPT 제안 — 도감 카드 */
+    .result-item {
+      background: #fff8e8;
+      border: 3px solid #e8d6a7; border-radius: 22px;
+      padding: 18px 18px 14px 48px;
+      margin-bottom: 14px; position: relative;
+      box-shadow: 0 5px 0 #d2b67b;
+    }
+    .result-item::before {
+      content: "🏷";
+      position: absolute; left: 14px; top: 16px; font-size: 20px;
+    }
+    .ri-name  { font-size: 15px; margin-bottom: 9px; color: #3d2b1f; font-weight: 800; }
+    .ri-lbl   { font-size: 11px; color: #8a6a50; margin-bottom: 3px; }
+    .ri-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+    .ri-chip  { background: #c0e8d8; color: #2d6040; padding: 3px 9px; border-radius: 12px; font-size: 12px; }
+    .ri-time  { font-size: 11px; color: #bbb; text-align: right; }
+
+    .empty-msg { text-align: center; padding: 40px; color: #8a6a50; font-size: 15px; line-height: 1.8; }
+    .loading   { text-align: center; padding: 30px; color: #8a6a50; font-size: 15px; }
+
+    /* ── Toast ──────────────────────────────────────────────────────────── */
+    .toast {
+      position: fixed; bottom: 26px;
+      left: 50%; transform: translateX(-50%) translateY(14px);
+      background: #5baa5f; color: white;
+      padding: 11px 22px; border-radius: 999px;
+      font-family: inherit; font-size: 14px;
+      opacity: 0; transition: all .3s;
+      z-index: 9999; white-space: nowrap; pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+
+<script>
+  const SUPABASE_URL = 'hsb_publishable_1jEekRZ4x1i8I95eTRGUsQ_WpsPHUog';
+  const SUPABASE_KEY = 'YeyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhsbG9hdWJ4ZmRoemVveGFmb2dhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2NDc3ODksImV4cCI6MjA5NzIyMzc4OX0.cHag4hEZoKPuw9RaVEMks2v1o37lP00X-AqMbSMfFbc';
+</script>
+
+<div id="app">
+
+  <!-- ══ COVER ══ -->
+  <div id="scr-cover" class="screen active">
+
+    <!-- AC 로고 타이틀 -->
+    <div class="ac-logo">
+      <div class="ac-logo-row">
+        <span class="leaf">🌿</span>
+        <span class="logo-block green">모</span>
+        <span class="logo-block yellow">여</span>
+        <span class="logo-block blue">봐</span>
+        <span class="logo-block orange">요</span>
+        <span class="leaf">🍃</span>
+      </div>
+      <div class="ac-logo-row second">
+        <span class="logo-block red">탱</span>
+        <span class="logo-block purple">구</span>
+        <span class="logo-block green">네</span>
+        <span class="logo-block yellow">집</span>
+      </div>
+      <div class="ac-subtitle">Housewarming Party ✦ 2026.07</div>
+    </div>
+
+    <!-- 카드 + CTA -->
+    <div class="cover-card">
+      <div class="cover-desc">탱구의 자취방 집들이에 초대합니다! 🏡<br>희망하는 일정과 컨셉을 골라주세요!</div>
+      <button class="ac-btn" onclick="nav('form')">초대 수락하기 🌿</button>
+    </div>
+
+  </div>
+
+  <!-- ══ FORM ══ -->
+  <div id="scr-form" class="screen gone-right">
+    <div class="top-bar">
+      <button class="back-btn" onclick="nav('cover','back')">←</button>
+      <h2>🌿 참석 정보 입력</h2>
+      <p>편하게 골라주세요!</p>
+    </div>
+    <div class="form-body">
+
+      <div class="card" id="card-name">
+        <div class="card-head">
+          <div class="card-icon i-teal">👤</div>
+          <div class="q-label">이름</div>
+        </div>
+        <div class="q-desc">닉네임도 좋아요</div>
+        <input class="name-input" id="input-name" type="text" placeholder="이름을 입력해 주세요">
+      </div>
+
+      <div class="card" id="card-date">
+        <div class="card-head">
+          <div class="card-icon i-yellow">📅</div>
+          <div class="q-label">참석 가능일</div>
+        </div>
+        <div class="q-desc">7월 평일 중 가능한 날을 모두 골라주세요</div>
+        <div class="cal-month-label">2026년 7월</div>
+        <div class="cal-grid" id="cal-grid"></div>
+      </div>
+
+      <div class="card" id="card-meal">
+        <div class="card-head">
+          <div class="card-icon i-pink">🍽️</div>
+          <div class="q-label">희망 식사 타입</div>
+        </div>
+        <div class="q-desc">다중선택 가능</div>
+        <div class="chips">
+          <div class="chip" data-g="meal">🛵 편하게 배달</div>
+          <div class="chip" data-g="meal">🥘 양재 맛집탐방</div>
+          <div class="chip" data-g="meal">👩‍🍳 태연표 야매요리</div>
+        </div>
+      </div>
+
+      <div class="card" id="card-concept">
+        <div class="card-head">
+          <div class="card-icon i-green">🎉</div>
+          <div class="q-label">희망 집들이 컨셉</div>
+        </div>
+        <div class="q-desc">다중선택 가능</div>
+        <div class="chips">
+          <div class="chip" data-g="concept">🎲 집에서 보드게임</div>
+          <div class="chip" data-g="concept">🍺 간술과 수다타임</div>
+          <div class="chip" data-g="concept">🌿 양재천 산책</div>
+          <div class="chip" data-g="concept" id="chip-etc">💡 기타 제안</div>
+        </div>
+        <input class="custom-input" id="input-custom" type="text" placeholder="어떤 걸 하고 싶어요? ✨">
+      </div>
+
+      <button class="submit-btn" id="submit-btn" onclick="handleSubmit()">신청하기 🍃</button>
+    </div>
+  </div>
+
+  <!-- ══ RESULT ══ -->
+  <div id="scr-result" class="screen gone-right">
+    <div class="ac-sticker">🏠</div>
+    <div style="display:flex;flex-direction:column;align-items:center;padding:0 16px 64px;width:100%;">
+      <div id="result-card">
+        <div class="rc-top-bar">
+          <div class="rc-title">✅ 신청 완료!</div>
+          <div class="rc-sub" id="rc-date-label"></div>
+        </div>
+        <div class="rc-body">
+          <div class="rc-row"><div class="rc-lbl">👤 이름</div><div class="rc-chips" id="rc-name"></div></div>
+          <div class="rc-row"><div class="rc-lbl">📅 참석 가능일</div><div class="rc-chips" id="rc-dates"></div></div>
+          <div class="rc-row"><div class="rc-lbl">🍽️ 식사 타입</div><div class="rc-chips" id="rc-meal"></div></div>
+          <div class="rc-row"><div class="rc-lbl">🎉 컨셉</div><div class="rc-chips" id="rc-concept"></div></div>
+          <div class="rc-foot">집들이 일정이 확정되면 연락 드릴게요 🧡</div>
+        </div>
+      </div>
+      <button class="save-btn" onclick="saveImage()">📸 이미지로 저장하기</button>
+      <button class="ghost-btn" id="home-btn">처음으로 돌아가기</button>
+    </div>
+  </div>
+
+  <!-- ══ RESULTS VIEW ══ -->
+  <div id="scr-results" class="screen gone-right">
+    <div class="top-bar">
+      <button class="back-btn" onclick="nav('cover','back')">←</button>
+      <h2>📊 참석 현황</h2>
+      <button class="refresh-btn" onclick="loadResults()">↻</button>
+    </div>
+    <div class="results-body">
+      <div class="stats-card">
+        <div class="stats-top"><div class="stats-title">📅 날짜별 참석자 수</div></div>
+        <div class="stats-body" id="stats-dates"></div>
+      </div>
+      <div id="results-list"><div class="loading">불러오는 중...</div></div>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── Supabase ── */
+let db;
+try {
+  if (typeof supabase !== 'undefined' && SUPABASE_URL !== 'https://YOUR_PROJECT.supabase.co') {
+    const { createClient } = supabase;
+    db = createClient(SUPABASE_URL, SUPABASE_KEY);
+  }
+} catch(e) { console.warn('Supabase:', e); }
+
+/* ── Navigation ── */
+function nav(to, dir) {
+  const cur = document.querySelector('.screen.active');
+  const nxt = document.getElementById('scr-' + to);
+  if (!nxt || !cur || cur === nxt) return;
+  try {
+    cur.classList.remove('active');
+    cur.classList.add(dir === 'back' ? 'gone-right' : 'gone-left');
+    nxt.classList.remove('gone-left','gone-right');
+    nxt.classList.add('active');
+    if (to === 'results') loadResults();
+    nxt.scrollTop = 0;
+  } catch(e) { console.error('nav error:', e); }
+}
+
+/* ── Calendar ── */
+const selectedDates = new Set();
+function buildCal() {
+  const grid = document.getElementById('cal-grid');
+  const heads = ['월','화','수','목','금','토','일'];
+  let h = heads.map((d,i) => `<div class="cal-head${i>=5?' wk':''}">${d}</div>`).join('');
+  const startDow = 2;
+  for (let e=0; e<startDow; e++) h += `<div class="cal-cell empty"></div>`;
+  for (let d=1; d<=31; d++) {
+    const dow = (startDow+d-1)%7;
+    const key = `7/${d}`;
+    h += dow>=5
+      ? `<div class="cal-cell wknd">${d}</div>`
+      : `<div class="cal-cell wkday" onclick="toggleDay('${key}',this)">${d}</div>`;
+  }
+  grid.innerHTML = h;
+}
+function toggleDay(key, el) {
+  if (selectedDates.has(key)) { selectedDates.delete(key); el.classList.remove('on'); }
+  else                        { selectedDates.add(key);    el.classList.add('on'); }
+}
+buildCal();
+
+/* ── Chips ── */
+document.querySelectorAll('.chip').forEach(c => {
+  c.addEventListener('click', () => {
+    c.classList.toggle('on');
+    if (c.id === 'chip-etc')
+      document.getElementById('input-custom').classList.toggle('show', c.classList.contains('on'));
+  });
+});
+function getSelected(g) {
+  return [...document.querySelectorAll(`.chip[data-g="${g}"].on`)].map(c => {
+    if (c.id === 'chip-etc') {
+      const v = document.getElementById('input-custom').value.trim();
+      return v ? `💡 ${v}` : '💡 기타 제안';
+    }
+    return c.textContent.trim();
+  });
+}
+
+/* ── Validation ── */
+function markError(id) {
+  const card = document.getElementById(id);
+  card.classList.remove('error');
+  void card.offsetWidth;
+  card.classList.add('error');
+  card.scrollIntoView({behavior:'smooth',block:'center'});
+  setTimeout(() => card.classList.remove('error'), 2000);
+}
+
+/* ── Submit ── */
+async function handleSubmit() {
+  const name  = document.getElementById('input-name').value.trim();
+  const dates = [...selectedDates].sort((a,b) => +a.split('/')[1] - +b.split('/')[1]);
+  const meals = getSelected('meal');
+  const cons  = getSelected('concept');
+  if (!name)         { markError('card-name');    return showToast('이름을 입력해 주세요!'); }
+  if (!dates.length) { markError('card-date');    return showToast('참석 가능일을 선택해 주세요!'); }
+  if (!meals.length) { markError('card-meal');    return showToast('식사 타입을 선택해 주세요!'); }
+  if (!cons.length)  { markError('card-concept'); return showToast('집들이 컨셉을 선택해 주세요!'); }
+
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true; btn.textContent = '저장 중...';
+  const payload = { name, available_dates: dates, meal_types: meals, concepts: cons, created_at: new Date().toISOString() };
+  try {
+    if (db) { const { error } = await db.from('submissions').insert(payload); if (error) throw error; }
+    else await new Promise(r => setTimeout(r, 500));
+    showResultCard(name, dates, meals, cons);
+  } catch(e) {
+    console.error(e);
+    showToast('저장 중 오류가 발생했어요 😢');
+    btn.disabled = false; btn.textContent = '신청하기 🍃';
+  }
+}
+
+function showResultCard(name, dates, meals, cons) {
+  document.getElementById('rc-date-label').textContent =
+    new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'}) + ' 신청';
+  const mk = (arr, id) =>
+    document.getElementById(id).innerHTML = arr.map(t => `<span class="rc-chip">${t}</span>`).join('');
+  document.getElementById('rc-name').innerHTML = `<span class="rc-chip">${name}</span>`;
+  mk(dates,'rc-dates'); mk(meals,'rc-meal'); mk(cons,'rc-concept');
+  nav('result');
+}
+
+function resetForm() {
+  document.getElementById('input-name').value = '';
+  document.getElementById('input-custom').value = '';
+  document.getElementById('input-custom').classList.remove('show');
+  document.querySelectorAll('.chip.on').forEach(c => c.classList.remove('on'));
+  selectedDates.clear();
+  document.querySelectorAll('.cal-cell.on').forEach(c => c.classList.remove('on'));
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = false; btn.textContent = '신청하기 🍃';
+}
+document.getElementById('home-btn').onclick = () => { resetForm(); nav('cover','back'); };
+
+/* ── Save image ── */
+async function saveImage() {
+  showToast('이미지 저장 중...');
+  try {
+    const canvas = await html2canvas(document.getElementById('result-card'), {
+      scale: 2, backgroundColor: '#fff7df', useCORS: true
+    });
+    const a = document.createElement('a');
+    a.download = '탱구집들이_신청서.png';
+    a.href = canvas.toDataURL('image/png');
+    a.click();
+    showToast('✅ 이미지가 저장됐어요!');
+  } catch(e) { console.error(e); showToast('이미지 저장에 실패했어요 😢'); }
+}
+
+/* ── Results ── */
+const WEEKDAYS = [];
+for (let d=1; d<=31; d++) { if ((2+d-1)%7 < 5) WEEKDAYS.push(`7/${d}`); }
+
+async function loadResults() {
+  const list = document.getElementById('results-list');
+  list.innerHTML = '<div class="loading">불러오는 중...</div>';
+  if (!db) {
+    list.innerHTML = '<div class="empty-msg">⚙️ Supabase를 설정하면<br>여기서 모든 응답을 볼 수 있어요!</div>';
+    document.getElementById('stats-dates').innerHTML = '';
+    return;
+  }
+  try {
+    const { data, error } = await db.from('submissions').select('*').order('created_at',{ascending:false});
+    if (error) throw error;
+    renderStats(data||[]); renderList(data||[]);
+  } catch(e) { console.error(e); list.innerHTML='<div class="empty-msg">⚠️ 불러오지 못했어요</div>'; }
+}
+
+function renderStats(data) {
+  const el = document.getElementById('stats-dates');
+  const cnt = {}; WEEKDAYS.forEach(d => cnt[d]=0);
+  data.forEach(r => (r.available_dates||[]).forEach(d => { if (cnt[d]!==undefined) cnt[d]++; }));
+  const max = Math.max(...Object.values(cnt), 1);
+  const sorted = WEEKDAYS.filter(d => cnt[d]>0).sort((a,b) => cnt[b]-cnt[a]);
+  if (!sorted.length) {
+    el.innerHTML = '<div style="color:#aaa;font-size:13px;text-align:center;padding:6px 0">아직 신청자가 없어요</div>';
+    return;
+  }
+  el.innerHTML = sorted.map(d => `
+    <div class="stat-row">
+      <div class="stat-name">${d}</div>
+      <div class="stat-bg"><div class="stat-fill" style="width:${(cnt[d]/max)*100}%"></div></div>
+      <div class="stat-cnt">${cnt[d]}명</div>
+    </div>`).join('');
+}
+
+function renderList(data) {
+  const list = document.getElementById('results-list');
+  if (!data.length) { list.innerHTML='<div class="empty-msg">아직 신청한 사람이 없어요 🥺</div>'; return; }
+  list.innerHTML = data.map(r => `
+    <div class="result-item">
+      <div class="ri-name">👤 ${r.name}</div>
+      <div class="ri-lbl">📅 참석 가능일</div>
+      <div class="ri-chips">${(r.available_dates||[]).map(d=>`<span class="ri-chip">${d}</span>`).join('')}</div>
+      <div class="ri-lbl">🍽️ 식사 타입</div>
+      <div class="ri-chips">${(r.meal_types||[]).map(m=>`<span class="ri-chip">${m}</span>`).join('')}</div>
+      <div class="ri-lbl">🎉 컨셉</div>
+      <div class="ri-chips">${(r.concepts||[]).map(c=>`<span class="ri-chip">${c}</span>`).join('')}</div>
+      <div class="ri-time">${new Date(r.created_at).toLocaleString('ko-KR')}</div>
+    </div>`).join('');
+}
+
+/* ── Toast ── */
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+</script>
+</body>
+</html>
